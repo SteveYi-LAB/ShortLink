@@ -7,9 +7,11 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -50,7 +52,12 @@ func webServer(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
 		if r.URL.Path == "/api/create" {
-			tokenValue := "123456"
+			err := godotenv.Load()
+			if err != nil {
+				log.Fatal("Error loading .env file")
+			}
+
+			tokenValue := os.Getenv("token")
 
 			r.ParseForm()
 			token := "NULL"
