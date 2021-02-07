@@ -17,22 +17,32 @@ func webServer(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("Method:", r.Method)
 	fmt.Println(r.URL.Path)
+	fmt.Println("IP Address: ", getIP(r))
+
 	p := "." + r.URL.Path
 
 	if r.Method == "GET" {
 		if p == "./" || p == "./index.html" {
 			http.ServeFile(w, r, "./index.html")
 		} else {
-			shortLink := strings.ReplaceAll(p, "./", "")
-			fmt.Println(shortLink)
+			shortLinkCode := strings.ReplaceAll(p, "./", "")
+			fmt.Println(shortLinkCode)
+
+			db, err := sql.Open("sqlite3", "db")
+			if err != nil {
+				fmt.Println(err)
+			}
+			rows, err := db.Query("SELECT link FROM shortlink WHERE code = ?", shortLinkCode)
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				fmt.Println(rows)
+			}
 		}
 	}
 
 	if r.Method == "POST" {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-
-		fmt.Println("Method:", r.Method)
-		fmt.Println(r.URL.Path)
 
 		if r.URL.Path == "/api/create" {
 			tokenValue := "123456"
@@ -52,18 +62,28 @@ func webServer(w http.ResponseWriter, r *http.Request) {
 
 			if token == tokenValue {
 				code := randomString(5)
-				fmt.Println(code)
 
-				db, err := sql.Open("sqlite3", "./data.db")
-				checkErr(err)
+				db, err := sql.Open("sqlite3", "db")
+				if err != nil {
+					fmt.Println(err)
+				}
 
 				stmt, err := db.Prepare("INSERT INTO shortlink(code, link, ipAddress) values(?,?,?)")
-				checkErr(err)
-				res, err := stmt.Exec(code, link, getIP())
-				checkErr(err)
+				if err != nil {
+					fmt.Println(err)
+				}
+				res, err := stmt.Exec(code, link, getIP(r))
+				if err != nil {
+					fmt.Println(err)
+				}
 				id, err := res.LastInsertId()
-				checkErr(err)
-
+				if err != nil {
+					fmt.Println(err)
+					fmt.Println(id)
+				} else {
+					io.WriteString(w, "Success!\n")
+					io.WriteString(w, code)
+				}
 			} else {
 				io.WriteString(w, "Unauthorized!\n")
 			}
