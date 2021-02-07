@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"io"
 	"log"
@@ -8,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func webServer(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +40,6 @@ func webServer(w http.ResponseWriter, r *http.Request) {
 			r.ParseForm()
 			token := "NULL"
 			link := "NULL"
-			fmt.Println(link)
 
 			for key, values := range r.Form {
 				if key == "token" {
@@ -51,6 +53,16 @@ func webServer(w http.ResponseWriter, r *http.Request) {
 			if token == tokenValue {
 				code := randomString(5)
 				fmt.Println(code)
+
+				db, err := sql.Open("sqlite3", "./data.db")
+				checkErr(err)
+
+				stmt, err := db.Prepare("INSERT INTO shortlink(code, link, ipAddress) values(?,?,?)")
+				checkErr(err)
+				res, err := stmt.Exec(code, link, getIP())
+				checkErr(err)
+				id, err := res.LastInsertId()
+				checkErr(err)
 
 			} else {
 				io.WriteString(w, "Unauthorized!\n")
