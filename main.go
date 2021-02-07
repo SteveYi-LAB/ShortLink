@@ -17,7 +17,7 @@ import (
 
 func webServer(w http.ResponseWriter, r *http.Request) {
 
-	fmt.Println("Method:", r.Method)
+	fmt.Println("\nMethod:", r.Method)
 	fmt.Println(r.URL.Path)
 	fmt.Println("IP Address: ", getIP(r))
 
