@@ -26,17 +26,22 @@ func webServer(w http.ResponseWriter, r *http.Request) {
 			http.ServeFile(w, r, "./index.html")
 		} else {
 			shortLinkCode := strings.ReplaceAll(p, "./", "")
-			fmt.Println(shortLinkCode)
+			fmt.Println("Code: " + shortLinkCode)
 
 			db, err := sql.Open("sqlite3", "db")
 			if err != nil {
 				fmt.Println(err)
 			}
 			rows, err := db.Query("SELECT link FROM shortlink WHERE code = ?", shortLinkCode)
-			if err != nil {
-				fmt.Println(err)
-			} else {
-				fmt.Println(rows)
+
+			for rows.Next() {
+				var link string
+				err = rows.Scan(&link)
+				if err != nil {
+					fmt.Println(err)
+				}
+				fmt.Println("Link: " + link)
+				http.Redirect(w, r, link, 302)
 			}
 		}
 	}
