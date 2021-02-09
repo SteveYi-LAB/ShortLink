@@ -2,11 +2,14 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -36,6 +39,8 @@ func webServer(w http.ResponseWriter, r *http.Request) {
 			}
 			rows, err := db.Query("SELECT link FROM shortlink WHERE code = ?", shortLinkCode)
 
+			var linkcheck int
+
 			for rows.Next() {
 				var link string
 				err = rows.Scan(&link)
@@ -43,7 +48,18 @@ func webServer(w http.ResponseWriter, r *http.Request) {
 					fmt.Println(err)
 				}
 				fmt.Println("Link: " + link)
-				http.Redirect(w, r, link, 302)
+				if link == "" {
+					linkcheck = 0
+				} else {
+					http.Redirect(w, r, link, 302)
+					linkcheck = 1
+				}
+			}
+
+			if linkcheck == 0 {
+				w.WriteHeader(http.StatusNotFound)
+				io.WriteString(w, "Link not found!\n")
+				fmt.Println("Not Found!")
 			}
 		}
 	}
@@ -62,6 +78,10 @@ func webServer(w http.ResponseWriter, r *http.Request) {
 			r.ParseForm()
 			token := "NULL"
 			link := "NULL"
+			admin := "false"
+			googleRecaptcha := "NULL"
+			custom := "false"
+			customcode := ""
 
 			for key, values := range r.Form {
 				if key == "token" {
@@ -70,34 +90,84 @@ func webServer(w http.ResponseWriter, r *http.Request) {
 				if key == "link" {
 					link = values[0]
 				}
+				if key == "admin" {
+					admin = values[0]
+				}
+				if key == "g-recaptcha-response" {
+					googleRecaptcha = values[0]
+				}
+				if key == "custom" {
+					custom = values[0]
+				}
+				if key == "customcode" {
+					customcode = values[0]
+				}
 			}
 
-			if token == tokenValue {
-				code := randomString(5)
+			if admin == "true" {
+				if token == tokenValue {
 
-				db, err := sql.Open("sqlite3", "db")
-				if err != nil {
-					fmt.Println(err)
-				}
+					var code string
+					code = randomString(5)
 
-				stmt, err := db.Prepare("INSERT INTO shortlink(code, link, ipAddress) values(?,?,?)")
-				if err != nil {
-					fmt.Println(err)
-				}
-				res, err := stmt.Exec(code, link, getIP(r))
-				if err != nil {
-					fmt.Println(err)
-				}
-				id, err := res.LastInsertId()
-				if err != nil {
-					fmt.Println(err)
-					fmt.Println(id)
+					if custom == "true" {
+						code = customcode
+					}
+
+					db, err := sql.Open("sqlite3", "db")
+					if err != nil {
+						fmt.Println(err)
+					}
+
+					stmt, err := db.Prepare("INSERT INTO shortlink(code, link, ipAddress) values(?,?,?)")
+					if err != nil {
+						fmt.Println(err)
+					}
+					res, err := stmt.Exec(code, link, getIP(r))
+					if err != nil {
+						fmt.Println(err)
+					}
+					id, err := res.LastInsertId()
+
+					if err != nil {
+						fmt.Println(err)
+						fmt.Println(id)
+					} else {
+						io.WriteString(w, "Success!\n")
+						io.WriteString(w, code)
+					}
 				} else {
-					io.WriteString(w, "Success!\n")
-					io.WriteString(w, code)
+					io.WriteString(w, "Unauthorized!\n")
 				}
 			} else {
-				io.WriteString(w, "Unauthorized!\n")
+				if verifyRecaptcha(googleRecaptcha) == "1" {
+					code := randomString(5)
+
+					db, err := sql.Open("sqlite3", "db")
+					if err != nil {
+						fmt.Println(err)
+					}
+
+					stmt, err := db.Prepare("INSERT INTO shortlink(code, link, ipAddress) values(?,?,?)")
+					if err != nil {
+						fmt.Println(err)
+					}
+					res, err := stmt.Exec(code, link, getIP(r))
+					if err != nil {
+						fmt.Println(err)
+					}
+					id, err := res.LastInsertId()
+
+					if err != nil {
+						fmt.Println(err)
+						fmt.Println(id)
+					} else {
+						io.WriteString(w, "Success!\n")
+						io.WriteString(w, code)
+					}
+				} else {
+					io.WriteString(w, "Unauthorized!\n")
+				}
 			}
 		}
 	}
@@ -123,6 +193,39 @@ func randomString(length int) string {
 		output.WriteString(string(randomChar))
 	}
 	return (output.String())
+}
+
+func verifyRecaptcha(recaptcha string) string {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	verifyLink := "https://www.recaptcha.net/recaptcha/api/siteverify"
+	secretKey := os.Getenv("Google_Recaptcha_SecretKey")
+	verifySuccess := "0"
+
+	resp, err := http.PostForm(verifyLink,
+		url.Values{"secret": {secretKey}, "response": {recaptcha}})
+	if err != nil {
+		fmt.Println(err)
+	}
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	type JSONAPIResponse struct {
+		Success bool `json:"success"`
+	}
+	var googleResponse JSONAPIResponse
+
+	json.Unmarshal(body, &googleResponse)
+
+	if googleResponse.Success == true {
+		verifySuccess = "1"
+		fmt.Println("Google Recaptcha Success")
+	} else {
+		fmt.Println("Google Recaptcha failure")
+	}
+	return verifySuccess
 }
 
 func main() {
