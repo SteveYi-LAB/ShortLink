@@ -23,6 +23,7 @@ func webServer(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("\nMethod:", r.Method)
 	fmt.Println(r.URL.Path)
 	fmt.Println("IP Address: ", getIP(r))
+	fmt.Println("Current Time: ", time.Now())
 
 	p := "." + r.URL.Path
 
@@ -163,12 +164,18 @@ func webServer(w http.ResponseWriter, r *http.Request) {
 						fmt.Println(id)
 					} else {
 						io.WriteString(w, "Success!\n")
-						io.WriteString(w, code)
+						io.WriteString(w, "Code: "+code+"\n")
+						io.WriteString(w, "https://yiy.tw/"+code+"\n")
+						fmt.Println("Link Create!")
+						fmt.Println("Code: " + code)
+						fmt.Println("Link: " + link)
 					}
 				} else {
 					io.WriteString(w, "Unauthorized!\n")
 				}
 			}
+		} else {
+			io.WriteString(w, "HTTP "+r.Method+" Not Support!")
 		}
 	}
 }
@@ -221,9 +228,9 @@ func verifyRecaptcha(recaptcha string) string {
 
 	if googleResponse.Success == true {
 		verifySuccess = "1"
-		fmt.Println("Google Recaptcha Success")
+		// fmt.Println("Google Recaptcha Success")
 	} else {
-		fmt.Println("Google Recaptcha failure")
+		// fmt.Println("Google Recaptcha failure")
 	}
 	return verifySuccess
 }
