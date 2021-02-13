@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /ig
+Allow: /fb
+Allow: /twitter
+Allow: /steveyi
+Disallow: /
