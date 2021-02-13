@@ -120,61 +120,36 @@ func webServer(w http.ResponseWriter, r *http.Request) {
 							code = customcode
 						}
 
-						db, err := sql.Open("sqlite3", "db")
-						if err != nil {
-							fmt.Println(err)
-						}
+						makeshortlink := createShortLink(code, link, getIP(r))
+						io.WriteString(w, "Success!\n")
+						io.WriteString(w, "Code: "+code+"\n")
+						io.WriteString(w, makeshortlink+"\n")
+						fmt.Println("Link Create!")
+						fmt.Println("Code: " + code)
+						fmt.Println("Link: " + link)
 
-						stmt, err := db.Prepare("INSERT INTO shortlink(code, link, ipAddress) values(?,?,?)")
-						if err != nil {
-							fmt.Println(err)
-						}
-						res, err := stmt.Exec(code, link, getIP(r))
-						if err != nil {
-							fmt.Println(err)
-						}
-						id, err := res.LastInsertId()
-
-						if err != nil {
-							fmt.Println(err)
-							fmt.Println(id)
-						} else {
-							io.WriteString(w, "Success!\n")
-							io.WriteString(w, code)
-						}
 					} else {
 						io.WriteString(w, "Unauthorized!\n")
 					}
 				} else {
 					if verifyRecaptcha(googleRecaptcha) == "1" {
-						code := randomString(5)
+						var code string
+						code = randomString(3)
+						var checkforLoop int
 
-						db, err := sql.Open("sqlite3", "db")
-						if err != nil {
-							fmt.Println(err)
+						for checkforLoop == 0 {
+							if checkCodeAvailable(code) == 0 {
+								makeshortlink := createShortLink(code, link, getIP(r))
+								io.WriteString(w, "Success!\n")
+								io.WriteString(w, "Code: "+code+"\n")
+								io.WriteString(w, makeshortlink+"\n")
+								fmt.Println("Link Create!")
+								fmt.Println("Code: " + code)
+								fmt.Println("Link: " + link)
+								checkforLoop = 1
+							}
 						}
 
-						stmt, err := db.Prepare("INSERT INTO shortlink(code, link, ipAddress) values(?,?,?)")
-						if err != nil {
-							fmt.Println(err)
-						}
-						res, err := stmt.Exec(code, link, getIP(r))
-						if err != nil {
-							fmt.Println(err)
-						}
-						id, err := res.LastInsertId()
-
-						if err != nil {
-							fmt.Println(err)
-							fmt.Println(id)
-						} else {
-							io.WriteString(w, "Success!\n")
-							io.WriteString(w, "Code: "+code+"\n")
-							io.WriteString(w, "https://yiy.tw/"+code+"\n")
-							fmt.Println("Link Create!")
-							fmt.Println("Code: " + code)
-							fmt.Println("Link: " + link)
-						}
 					} else {
 						io.WriteString(w, "Google Recaptcha Failure!\n")
 					}
@@ -186,6 +161,59 @@ func webServer(w http.ResponseWriter, r *http.Request) {
 			io.WriteString(w, "HTTP "+r.Method+" Not Support!")
 		}
 	}
+}
+
+func createShortLink(code string, link string, IP string) string {
+
+	db, err := sql.Open("sqlite3", "db")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	stmt, err := db.Prepare("INSERT INTO shortlink(code, link, ipAddress) values(?,?,?)")
+	if err != nil {
+		fmt.Println(err)
+	}
+	res, err := stmt.Exec(code, link, IP)
+	if err != nil {
+		fmt.Println(err)
+	}
+	id, err := res.LastInsertId()
+	var makeshortlink string
+
+	if err != nil {
+		fmt.Println(err)
+		fmt.Println(id)
+	} else {
+		makeshortlink = "https://yiy.tw/" + code
+	}
+	return makeshortlink
+}
+
+func checkCodeAvailable(code string) int {
+
+	db, err := sql.Open("sqlite3", "db")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	rows, err := db.Query("SELECT link FROM shortlink WHERE code = ?", code)
+
+	var check int
+
+	for rows.Next() {
+		var link string
+		err = rows.Scan(&link)
+		if err != nil {
+			fmt.Println(err)
+		}
+		if link == "" {
+			check = 0
+		} else {
+			check = 1
+		}
+	}
+	return check
 }
 
 func getIP(r *http.Request) string {
