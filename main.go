@@ -105,7 +105,7 @@ func webServer(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			if strings.Contains(link, "http://") && strings.Contains(link, "https://") {
+			if strings.Contains(link, "http://") || strings.Contains(link, "https://") {
 				if admin == "true" {
 					if token == tokenValue {
 
