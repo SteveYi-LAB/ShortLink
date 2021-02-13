@@ -105,74 +105,78 @@ func webServer(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			if admin == "true" {
-				if token == tokenValue {
+			if strings.Contains(link, "http://") && strings.Contains(link, "https://") {
+				if admin == "true" {
+					if token == tokenValue {
 
-					var code string
-					code = randomString(5)
+						var code string
+						code = randomString(5)
 
-					if custom == "true" {
-						code = customcode
-					}
+						if custom == "true" {
+							code = customcode
+						}
 
-					db, err := sql.Open("sqlite3", "db")
-					if err != nil {
-						fmt.Println(err)
-					}
+						db, err := sql.Open("sqlite3", "db")
+						if err != nil {
+							fmt.Println(err)
+						}
 
-					stmt, err := db.Prepare("INSERT INTO shortlink(code, link, ipAddress) values(?,?,?)")
-					if err != nil {
-						fmt.Println(err)
-					}
-					res, err := stmt.Exec(code, link, getIP(r))
-					if err != nil {
-						fmt.Println(err)
-					}
-					id, err := res.LastInsertId()
+						stmt, err := db.Prepare("INSERT INTO shortlink(code, link, ipAddress) values(?,?,?)")
+						if err != nil {
+							fmt.Println(err)
+						}
+						res, err := stmt.Exec(code, link, getIP(r))
+						if err != nil {
+							fmt.Println(err)
+						}
+						id, err := res.LastInsertId()
 
-					if err != nil {
-						fmt.Println(err)
-						fmt.Println(id)
+						if err != nil {
+							fmt.Println(err)
+							fmt.Println(id)
+						} else {
+							io.WriteString(w, "Success!\n")
+							io.WriteString(w, code)
+						}
 					} else {
-						io.WriteString(w, "Success!\n")
-						io.WriteString(w, code)
+						io.WriteString(w, "Unauthorized!\n")
 					}
 				} else {
-					io.WriteString(w, "Unauthorized!\n")
+					if verifyRecaptcha(googleRecaptcha) == "1" {
+						code := randomString(5)
+
+						db, err := sql.Open("sqlite3", "db")
+						if err != nil {
+							fmt.Println(err)
+						}
+
+						stmt, err := db.Prepare("INSERT INTO shortlink(code, link, ipAddress) values(?,?,?)")
+						if err != nil {
+							fmt.Println(err)
+						}
+						res, err := stmt.Exec(code, link, getIP(r))
+						if err != nil {
+							fmt.Println(err)
+						}
+						id, err := res.LastInsertId()
+
+						if err != nil {
+							fmt.Println(err)
+							fmt.Println(id)
+						} else {
+							io.WriteString(w, "Success!\n")
+							io.WriteString(w, "Code: "+code+"\n")
+							io.WriteString(w, "https://yiy.tw/"+code+"\n")
+							fmt.Println("Link Create!")
+							fmt.Println("Code: " + code)
+							fmt.Println("Link: " + link)
+						}
+					} else {
+						io.WriteString(w, "Google Recaptcha Failure!\n")
+					}
 				}
 			} else {
-				if verifyRecaptcha(googleRecaptcha) == "1" {
-					code := randomString(5)
-
-					db, err := sql.Open("sqlite3", "db")
-					if err != nil {
-						fmt.Println(err)
-					}
-
-					stmt, err := db.Prepare("INSERT INTO shortlink(code, link, ipAddress) values(?,?,?)")
-					if err != nil {
-						fmt.Println(err)
-					}
-					res, err := stmt.Exec(code, link, getIP(r))
-					if err != nil {
-						fmt.Println(err)
-					}
-					id, err := res.LastInsertId()
-
-					if err != nil {
-						fmt.Println(err)
-						fmt.Println(id)
-					} else {
-						io.WriteString(w, "Success!\n")
-						io.WriteString(w, "Code: "+code+"\n")
-						io.WriteString(w, "https://yiy.tw/"+code+"\n")
-						fmt.Println("Link Create!")
-						fmt.Println("Code: " + code)
-						fmt.Println("Link: " + link)
-					}
-				} else {
-					io.WriteString(w, "Unauthorized!\n")
-				}
+				io.WriteString(w, "Please type a Vaild URL.")
 			}
 		} else {
 			io.WriteString(w, "HTTP "+r.Method+" Not Support!")
