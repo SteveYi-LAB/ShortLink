@@ -1,6 +1,6 @@
 # SteveYi Short Link
 
-A Short Link System, Written by Golang and SQLing.
+A Short Link System, Written by Golang and SQLite.
 
 ## Usage
 
