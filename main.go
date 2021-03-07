@@ -30,43 +30,42 @@ func webServer(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		if p == "./robots.txt" {
 			http.ServeFile(w, r, "./robots.txt")
+		} else if p == "./" || p == "./index.html" {
+			http.ServeFile(w, r, "./index.html")
 		} else {
-			if p == "./" || p == "./index.html" {
-				http.ServeFile(w, r, "./index.html")
-			} else {
-				shortLinkCode := strings.ReplaceAll(p, "./", "")
-				fmt.Println("Code: " + shortLinkCode)
+			shortLinkCode := strings.ReplaceAll(p, "./", "")
+			fmt.Println("Code: " + shortLinkCode)
 
-				db, err := sql.Open("sqlite3", "db")
+			db, err := sql.Open("sqlite3", "db")
+			if err != nil {
+				fmt.Println(err)
+			}
+			rows, err := db.Query("SELECT link FROM shortlink WHERE code = ?", shortLinkCode)
+
+			var linkcheck int
+
+			for rows.Next() {
+				var link string
+				err = rows.Scan(&link)
 				if err != nil {
 					fmt.Println(err)
 				}
-				rows, err := db.Query("SELECT link FROM shortlink WHERE code = ?", shortLinkCode)
-
-				var linkcheck int
-
-				for rows.Next() {
-					var link string
-					err = rows.Scan(&link)
-					if err != nil {
-						fmt.Println(err)
-					}
-					fmt.Println("Link: " + link)
-					if link == "" {
-						linkcheck = 0
-					} else {
-						http.Redirect(w, r, link, 302)
-						linkcheck = 1
-					}
-				}
-
-				if linkcheck == 0 {
-					w.WriteHeader(http.StatusNotFound)
-					io.WriteString(w, "Link not found!\n")
-					fmt.Println("Not Found!")
+				fmt.Println("Link: " + link)
+				if link == "" {
+					linkcheck = 0
+				} else {
+					http.Redirect(w, r, link, 302)
+					linkcheck = 1
 				}
 			}
+
+			if linkcheck == 0 {
+				w.WriteHeader(http.StatusNotFound)
+				io.WriteString(w, "Link not found!\n")
+				fmt.Println("Not Found!")
+			}
 		}
+
 	}
 
 	if r.Method == "POST" {
