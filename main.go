@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -14,155 +13,116 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func webServer(w http.ResponseWriter, r *http.Request) {
+func shortLinkCreate(ctx *gin.Context) {
 
-	fmt.Println("\nMethod:", r.Method)
-	fmt.Println(r.URL.Path)
-	fmt.Println("IP Address: ", getIP(r))
-	fmt.Println("Current Time: ", time.Now())
-
-	p := "." + r.URL.Path
-
-	if r.Method == "GET" {
-		if p == "./robots.txt" {
-			http.ServeFile(w, r, "./robots.txt")
-		} else if p == "./" || p == "./index.html" {
-			http.ServeFile(w, r, "./index.html")
-		} else {
-			shortLinkCode := strings.ReplaceAll(p, "./", "")
-			fmt.Println("Code: " + shortLinkCode)
-
-			db, err := sql.Open("sqlite3", "db")
-			if err != nil {
-				fmt.Println(err)
-			}
-			rows, err := db.Query("SELECT link FROM shortlink WHERE code = ?", shortLinkCode)
-
-			var linkcheck int
-
-			for rows.Next() {
-				var link string
-				err = rows.Scan(&link)
-				if err != nil {
-					fmt.Println(err)
-				}
-				fmt.Println("Link: " + link)
-				if link == "" {
-					linkcheck = 0
-				} else {
-					http.Redirect(w, r, link, 302)
-					linkcheck = 1
-				}
-			}
-
-			if linkcheck == 0 {
-				w.WriteHeader(http.StatusNotFound)
-				io.WriteString(w, "Link not found!\n")
-				fmt.Println("Not Found!")
-			}
-		}
-
+	type Result struct {
+		Success bool
+		Message string
+		Link    string
 	}
 
-	if r.Method == "POST" {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	var r Result
 
-		if r.URL.Path == "/api/create" {
-			err := godotenv.Load()
-			if err != nil {
-				log.Fatal("Error loading .env file")
-			}
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 
-			tokenValue := os.Getenv("token")
+	tokenValue := os.Getenv("token")
 
-			r.ParseForm()
-			token := "NULL"
-			link := "NULL"
-			admin := "false"
-			googleRecaptcha := "NULL"
-			custom := "false"
-			customcode := ""
+	token := ctx.PostForm("token")
+	link := ctx.PostForm("link")
+	admin := ctx.PostForm("admin")
+	googleRecaptcha := ctx.PostForm("g-recaptcha-response")
+	custom := ctx.PostForm("custom")
+	customcode := ctx.PostForm("customcode")
 
-			for key, values := range r.Form {
-				if key == "token" {
-					token = values[0]
+	if strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://") == true {
+		if admin == "true" {
+			if token == tokenValue {
+
+				var code string
+				code = randomString(3)
+
+				if custom == "true" {
+					code = customcode
 				}
-				if key == "link" {
-					link = values[0]
-				}
-				if key == "admin" {
-					admin = values[0]
-				}
-				if key == "g-recaptcha-response" {
-					googleRecaptcha = values[0]
-				}
-				if key == "custom" {
-					custom = values[0]
-				}
-				if key == "customcode" {
-					customcode = values[0]
-				}
-			}
 
-			if strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://") == true {
-				if admin == "true" {
-					if token == tokenValue {
-
-						var code string
-						code = randomString(3)
-
-						if custom == "true" {
-							code = customcode
-						}
-
-						makeshortlink := createShortLink(code, link, getIP(r))
-						io.WriteString(w, "Success!\n")
-						io.WriteString(w, "Code: "+code+"\n")
-						io.WriteString(w, makeshortlink+"\n")
-						fmt.Println("Link Create!")
-						fmt.Println("Code: " + code)
-						fmt.Println("Link: " + link)
-
-					} else {
-						io.WriteString(w, "Unauthorized!\n")
-					}
+				if createShortLink(code, link, ctx.ClientIP()) == 1 {
+					r = Result{true, "Succeed to create Link!", "https://yiy.tw/" + code}
 				} else {
-					if verifyRecaptcha(googleRecaptcha) == "1" {
-						var code string
-						code = randomString(3)
-						var checkforLoop int
-
-						for checkforLoop == 0 {
-							if checkCodeAvailable(code) == 0 {
-								makeshortlink := createShortLink(code, link, getIP(r))
-								io.WriteString(w, "Success!\n")
-								io.WriteString(w, "Code: "+code+"\n")
-								io.WriteString(w, makeshortlink+"\n")
-								fmt.Println("Link Create!")
-								fmt.Println("Code: " + code)
-								fmt.Println("Link: " + link)
-								checkforLoop = 1
-							}
-						}
-
-					} else {
-						io.WriteString(w, "Google Recaptcha Failure!\n")
-					}
+					r = Result{false, "Failure", ""}
 				}
+
 			} else {
-				io.WriteString(w, "Please type a Vaild URL.")
+				r = Result{false, "Unauthorized", ""}
 			}
 		} else {
-			io.WriteString(w, "HTTP "+r.Method+" Not Support!")
+			if verifyRecaptcha(googleRecaptcha) == "1" {
+				var code string
+				code = randomString(3)
+				var checkforLoop int
+
+				for checkforLoop == 0 {
+					if checkCodeAvailable(code) == 0 {
+						if createShortLink(code, link, ctx.ClientIP()) == 1 {
+							r = Result{true, "Succeed to create Link!", "https://yiy.tw/" + code}
+						} else {
+							r = Result{false, "Failure", ""}
+						}
+						checkforLoop = 1
+					}
+				}
+
+			} else {
+				r = Result{false, "Google Recaptcha Failure!", ""}
+			}
 		}
+	} else {
+		r = Result{false, "Please type a Vaild URL.", ""}
+	}
+	ctx.JSON(200, r)
+}
+
+func redicertShortLink(ctx *gin.Context) {
+	fmt.Println(ctx.ClientIP())
+	shortLinkCode := strings.ReplaceAll((ctx.Request.URL.Path), "/", "")
+	fmt.Println("Code: " + shortLinkCode)
+
+	db, err := sql.Open("sqlite3", "db")
+	if err != nil {
+		fmt.Println(err)
+	}
+	rows, err := db.Query("SELECT link FROM shortlink WHERE code = ?", shortLinkCode)
+
+	var linkcheck int
+
+	for rows.Next() {
+		var link string
+		err = rows.Scan(&link)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println("Link: " + link)
+		if link == "" {
+			linkcheck = 0
+		} else {
+			ctx.Redirect(302, link)
+			linkcheck = 1
+		}
+	}
+
+	if linkcheck == 0 {
+		ctx.HTML(404, "404.html", nil)
 	}
 }
 
-func createShortLink(code string, link string, IP string) string {
+func createShortLink(code string, link string, IP string) int {
 
 	db, err := sql.Open("sqlite3", "db")
 	if err != nil {
@@ -178,13 +138,13 @@ func createShortLink(code string, link string, IP string) string {
 		fmt.Println(err)
 	}
 	id, err := res.LastInsertId()
-	var makeshortlink string
+	var makeshortlink int
 
 	if err != nil {
 		fmt.Println(err)
 		fmt.Println(id)
 	} else {
-		makeshortlink = "https://yiy.tw/" + code
+		makeshortlink = 1
 	}
 	return makeshortlink
 }
@@ -213,14 +173,6 @@ func checkCodeAvailable(code string) int {
 		}
 	}
 	return check
-}
-
-func getIP(r *http.Request) string {
-	forwarded := r.Header.Get("X-FORWARDED-FOR")
-	if forwarded != "" {
-		return forwarded
-	}
-	return r.RemoteAddr
 }
 
 func randomString(length int) string {
@@ -263,28 +215,19 @@ func verifyRecaptcha(recaptcha string) string {
 
 	if googleResponse.Success == true {
 		verifySuccess = "1"
-		// fmt.Println("Google Recaptcha Success")
-	} else {
-		// fmt.Println("Google Recaptcha failure")
 	}
 	return verifySuccess
 }
 
 func main() {
-	http.HandleFunc("/", webServer)
+	router := gin.New()
+	router.Use(gin.Logger(), gin.Recovery())
+	router.LoadHTMLGlob("static/*")
 
-	fmt.Print("\n")
-	fmt.Print("-------------------\n")
-	fmt.Print("\n")
-	fmt.Print("Port listing at 32156\n")
-	fmt.Print("Author: SteveYi\n")
-	fmt.Print("Demo: https://yiy.tw/\n")
-	fmt.Print("\n")
-	fmt.Print("-------------------\n")
-	fmt.Print("\n")
+	router.GET("/", redicertShortLink)
+	router.POST("/api/create", shortLinkCreate)
 
-	err := http.ListenAndServe(":32156", nil)
-	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
-	}
+	router.NoRoute(redicertShortLink)
+
+	router.Run(":32156")
 }
