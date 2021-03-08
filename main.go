@@ -90,36 +90,43 @@ func shortLinkCreate(ctx *gin.Context) {
 }
 
 func redicertShortLink(ctx *gin.Context) {
-	fmt.Println(ctx.ClientIP())
-	shortLinkCode := strings.ReplaceAll((ctx.Request.URL.Path), "/", "")
-	fmt.Println("Code: " + shortLinkCode)
+	if ctx.Request.URL.Path == "/" {
+		ctx.HTML(302, "index.html", nil)
+	} else {
+		shortLinkCode := strings.ReplaceAll((ctx.Request.URL.Path), "/", "")
+		fmt.Println("Code: " + shortLinkCode)
 
-	db, err := sql.Open("sqlite3", "db")
-	if err != nil {
-		fmt.Println(err)
-	}
-	rows, err := db.Query("SELECT link FROM shortlink WHERE code = ?", shortLinkCode)
-
-	var linkcheck int
-
-	for rows.Next() {
-		var link string
-		err = rows.Scan(&link)
+		db, err := sql.Open("sqlite3", "db")
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Println("Link: " + link)
-		if link == "" {
-			linkcheck = 0
-		} else {
-			ctx.Redirect(302, link)
-			linkcheck = 1
+		rows, err := db.Query("SELECT link FROM shortlink WHERE code = ?", shortLinkCode)
+
+		var linkcheck int
+
+		for rows.Next() {
+			var link string
+			err = rows.Scan(&link)
+			if err != nil {
+				fmt.Println(err)
+			}
+			fmt.Println("Link: " + link)
+			if link == "" {
+				linkcheck = 0
+			} else {
+				ctx.Redirect(302, link)
+				linkcheck = 1
+			}
+		}
+
+		if linkcheck == 0 {
+			ctx.HTML(404, "404.html", nil)
 		}
 	}
+}
 
-	if linkcheck == 0 {
-		ctx.HTML(404, "404.html", nil)
-	}
+func pageNotAvailable(ctx *gin.Context) {
+	ctx.HTML(404, "404.html", nil)
 }
 
 func createShortLink(code string, link string, IP string) int {
@@ -224,10 +231,10 @@ func main() {
 	router.Use(gin.Logger(), gin.Recovery())
 	router.LoadHTMLGlob("static/*")
 
-	router.GET("/", redicertShortLink)
+	router.GET("/:ShortLinkCode", redicertShortLink)
 	router.POST("/api/create", shortLinkCreate)
 
-	router.NoRoute(redicertShortLink)
+	router.NoRoute(pageNotAvailable)
 
 	router.Run(":32156")
 }
