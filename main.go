@@ -18,7 +18,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func shortLinkCreate(ctx *gin.Context) {
+func shortLinkCreate(c *gin.Context) {
 
 	type Result struct {
 		Success bool
@@ -35,13 +35,13 @@ func shortLinkCreate(ctx *gin.Context) {
 
 	tokenValue := os.Getenv("token")
 
-	token := ctx.PostForm("token")
-	link := ctx.PostForm("link")
-	admin := ctx.PostForm("admin")
-	googleRecaptcha := ctx.PostForm("g-recaptcha-response")
-	custom := ctx.PostForm("custom")
-	customcode := ctx.PostForm("customcode")
-
+	token := c.PostForm("token")
+	link := c.PostForm("link")
+	admin := c.PostForm("admin")
+	googleRecaptcha := c.PostForm("g-recaptcha-response")
+	custom := c.PostForm("custom")
+	customcode := c.PostForm("customcode")
+	fmt.Println(link)
 	if strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://") == true {
 		if admin == "true" {
 			if token == tokenValue {
@@ -53,7 +53,7 @@ func shortLinkCreate(ctx *gin.Context) {
 					code = customcode
 				}
 
-				if createShortLink(code, link, ctx.ClientIP()) == 1 {
+				if createShortLink(code, link, c.ClientIP()) == 1 {
 					r = Result{true, "Succeed to create Link!", "https://yiy.tw/" + code}
 				} else {
 					r = Result{false, "Failure", ""}
@@ -70,7 +70,7 @@ func shortLinkCreate(ctx *gin.Context) {
 
 				for checkforLoop == 0 {
 					if checkCodeAvailable(code) == 0 {
-						if createShortLink(code, link, ctx.ClientIP()) == 1 {
+						if createShortLink(code, link, c.ClientIP()) == 1 {
 							r = Result{true, "Succeed to create Link!", "https://yiy.tw/" + code}
 						} else {
 							r = Result{false, "Failure", ""}
@@ -86,14 +86,14 @@ func shortLinkCreate(ctx *gin.Context) {
 	} else {
 		r = Result{false, "Please type a Vaild URL.", ""}
 	}
-	ctx.JSON(200, r)
+	c.JSON(200, r)
 }
 
-func redicertShortLink(ctx *gin.Context) {
-	if ctx.Request.URL.Path == "/" {
-		ctx.HTML(302, "index.html", nil)
+func redicertShortLink(c *gin.Context) {
+	if c.Request.URL.Path == "/" {
+		c.HTML(200, "index.tmpl", nil)
 	} else {
-		shortLinkCode := strings.ReplaceAll((ctx.Request.URL.Path), "/", "")
+		shortLinkCode := strings.ReplaceAll((c.Request.URL.Path), "/", "")
 		fmt.Println("Code: " + shortLinkCode)
 
 		db, err := sql.Open("sqlite3", "db")
@@ -114,19 +114,19 @@ func redicertShortLink(ctx *gin.Context) {
 			if link == "" {
 				linkcheck = 0
 			} else {
-				ctx.Redirect(302, link)
+				c.Redirect(302, link)
 				linkcheck = 1
 			}
 		}
 
 		if linkcheck == 0 {
-			ctx.HTML(404, "404.html", nil)
+			c.HTML(404, "404.tmpl", nil)
 		}
 	}
 }
 
-func pageNotAvailable(ctx *gin.Context) {
-	ctx.HTML(404, "404.html", nil)
+func pageNotAvailable(c *gin.Context) {
+	c.HTML(404, "404.tmpl", nil)
 }
 
 func createShortLink(code string, link string, IP string) int {
@@ -231,8 +231,9 @@ func main() {
 	router.Use(gin.Logger(), gin.Recovery())
 	router.LoadHTMLGlob("static/*")
 
+	router.GET("/", redicertShortLink)
 	router.GET("/:ShortLinkCode", redicertShortLink)
-	router.POST("/api/create", shortLinkCreate)
+	router.POST("/api/v1/create", shortLinkCreate)
 
 	router.NoRoute(pageNotAvailable)
 
