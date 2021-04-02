@@ -1,53 +1,88 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="utf-8">
-        <title>SteveYi Short Link</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/2.3.3/tocas.css">
-        <link rel="icon" href="https://network.steveyi.net/logo.png">
-        <script src='https://www.recaptcha.net/recaptcha/api.js' async defer></script>
-        <meta property="og:title" content="SteveYi Short Link"/>
-        <meta property="og:url" content="https://steveyi.net/ShortLink/"/>
-        <meta property="og:image" content="https://static.yiy.tw/static/img/og/ShortLink.png"/>
-        <meta property="og:image:secure_url" content="https://static.yiy.tw/media/yi/life/image03.jpg"/>
-        <meta property="og:image:type" content="image/png"/>
-        <meta property="og:image:width" content="400"/>
-        <meta property="og:image:height" content="400"/>
-        <meta property="og:type" content="website"/>
-        <meta property="og:description" content="SteveYi ShortLink Service"/>
-        <meta property="og:site_name" content="SteveYi ShortLink Service"/>
-    </head>
-    <body>
-        <div class="ts padded horizontally fitted fluid slate">
-            <div class="ts very narrow container">
-                <h1>酷小易 ㄉ 短網址</h1>
-                <p>立刻縮短你的網址吧！</p>
-            </div>
-        </div>
-        <br>
+
+<head>
+    <meta charset="utf-8">
+    <title>SteveYi Short Link</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/2.3.3/tocas.css">
+    <link rel="icon" href="https://network.steveyi.net/logo.png">
+    <script src='https://www.recaptcha.net/recaptcha/api.js' async defer></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/vue/3.0.11/vue.global.js'></script>
+    <meta property="og:title" content="SteveYi Short Link" />
+    <meta property="og:url" content="https://steveyi.net/ShortLink/" />
+    <meta property="og:image" content="https://static.yiy.tw/static/img/og/ShortLink.png" />
+    <meta property="og:image:secure_url" content="https://static.yiy.tw/media/yi/life/image03.jpg" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="400" />
+    <meta property="og:image:height" content="400" />
+    <meta property="og:type" content="website" />
+    <meta property="og:description" content="SteveYi ShortLink Service" />
+    <meta property="og:site_name" content="SteveYi ShortLink Service" />
+</head>
+
+<body>
+    <div class="ts padded horizontally fitted fluid slate">
         <div class="ts very narrow container">
-            <div class="ts clearing segment">
-                <form class="ts form" action="/api/v1/create" method="POST">
-                    <div class="field">
-                        <label></label>
-                        <input placeholder="輸入你想縮短的網址..." type="text" name='link'>
-                    </div>
-                    <script type="application/javascript">
-                        function getip(json) {
-                            document.write("系統會記錄您目前的 IP 位置:", json.IP);
-                        }
-                    </script>
-                    <script type="application/javascript" src="https://ip.steveyi.net/ip/"></script>
-                    <div class='captcha_wrapper'>
-                        <br>
-                        <div class='g-recaptcha' data-sitekey='6LdkGd8UAAAAAM2gOhnVwf64D2arRTf0OXI6tNSy'></div>
-                    </div>
-                    <button class="ts right floated button">建立!</button>
-                </form>
-            </div>
-Design by 酷小易 @ 2021
-<br/>
+            <h1>酷小易 ㄉ 短網址</h1>
+            <p>立刻縮短你的網址吧！</p>
         </div>
-    </body>
+    </div>
+    <br>
+    <div class="ts very narrow container" id="app">
+        <div class="ts clearing segment">
+            <form class="ts form" action="/api/v1/create" method="POST" id="short-link-form" @submit.prevent="createShortLink">
+                <div class="field">
+                    <label></label>
+                    <input placeholder="輸入你想縮短的網址..." type="text" name='link'>
+                </div>
+                <p>系統會記錄您目前的 IP 位置: {{IP}}</p>
+                <div class='captcha_wrapper'>
+                    <br>
+                    <div class='g-recaptcha' data-sitekey='6LdkGd8UAAAAAM2gOhnVwf64D2arRTf0OXI6tNSy'></div>
+                </div>
+                <button class="ts right floated button">建立!</button>
+            </form>
+        </div>
+        Design by 酷小易 @ 2021
+        <br/>
+    </div>
+</body>
+<script>
+    const App = {
+        data() {
+            return {
+                IP: '0.0.0.0'
+            }
+        },
+        async created() {
+            this.getIP()
+        },
+        methods: {
+            async getIP() {
+                let {
+                    IP,
+                    ASN,
+                    ASN_ISP,
+                    Country_Code,
+                    Organization
+                } = await fetch('https://ip.steveyi.net/ip/').then(x => x.json())
+                this.IP = IP
+            },
+            async createShortLink() {
+                let formData = new FormData(document.getElementById('short-link-form'));
+                let res = await fetch('https://yiy.tw/api/v1/create', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    },
+                }).then(x => x.json())
+                console.log(res)
+            }
+        }
+    }
+    Vue.createApp(App).mount('#app')
+</script>
+
 </html>
