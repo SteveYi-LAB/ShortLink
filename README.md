@@ -1,6 +1,6 @@
 # SteveYi Short Link
 
-A Short Link System, Written by Golang and SQLite.
+A Short Link System, Written by Golang and PostgreSQL.
 
 ## Usage
 
@@ -10,13 +10,13 @@ GET /{code}
 code: You will get it when you create a short link.
 ```
 
-POST /api/create/
+POST /api/v1/create/
 
 ```
 admin: open admin features  
-token: contact admin to get it.(Need open admin features)  
-link: need redicert link, (like https://steveyi.net/)  
+token: contact admin to get it.(Need enabled admin features)  
+link: need redicert link, (like as https://steveyi.net/)  
 g-recaptcha-response: Google Recaptcha  
 custom: open custom code features  
-customcode: custom code.(Need open custom features)  
+customcode: custom code.(Need enabled custom features)  
 ```
