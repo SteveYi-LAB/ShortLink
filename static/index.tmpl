@@ -36,7 +36,7 @@
                     <label></label>
                     <input placeholder="輸入你想縮短的網址..." type="text" name='link'>
                 </div>
-                <p>系統會記錄您目前的 IP 位置: {{IP}}</p>
+                <p>系統會記錄您目前的 IP 位置: ${IP}</p>
                 <div class='captcha_wrapper'>
                     <br>
                     <div class='g-recaptcha' data-sitekey='6LdkGd8UAAAAAM2gOhnVwf64D2arRTf0OXI6tNSy'></div>
@@ -50,6 +50,7 @@
 </body>
 <script>
     const App = {
+        delimiters: ['${', '}'],
         data() {
             return {
                 IP: '0.0.0.0'
@@ -70,13 +71,11 @@
                 this.IP = IP
             },
             async createShortLink() {
-                let formData = new FormData(document.getElementById('short-link-form'));
-                let res = await fetch('https://yiy.tw/api/v1/create', {
+                let formData = new URLSearchParams(new FormData(document.getElementById('short-link-form')));
+                console.log(formData)
+                let res = await fetch('/api/v1/create', {
                     method: 'POST',
                     body: formData,
-                    headers: {
-                        'Content-Type': 'multipart/form-data'
-                    },
                 }).then(x => x.json())
                 console.log(res)
             }
