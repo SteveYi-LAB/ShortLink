@@ -111,7 +111,7 @@ func shortLinkCreate(c *gin.Context) {
 				var checkforLoop bool
 
 				for checkforLoop == false {
-					if checkCodeAvailable(code) == true {
+					if checkCodeAvailable(code) == false {
 						if createShortLink(code, link, c.ClientIP()) == true {
 							r = Result{true, "Succeed to create Link!", "https://yiy.tw/" + code}
 							c.JSON(200, r)
