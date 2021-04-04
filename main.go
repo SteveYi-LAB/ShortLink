@@ -120,6 +120,8 @@ func shortLinkCreate(c *gin.Context) {
 							c.JSON(400, r)
 						}
 						checkforLoop = true
+					} else {
+						code = randomString(3)
 					}
 				}
 
