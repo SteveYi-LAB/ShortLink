@@ -97,7 +97,7 @@ func shortLinkCreate(c *gin.Context) {
 					c.JSON(200, r)
 				} else {
 					r = Result{false, "Failure", ""}
-					c.JSON(404, r)
+					c.JSON(400, r)
 				}
 
 			} else {
@@ -117,7 +117,7 @@ func shortLinkCreate(c *gin.Context) {
 							c.JSON(200, r)
 						} else {
 							r = Result{false, "Failure", ""}
-							c.JSON(404, r)
+							c.JSON(400, r)
 						}
 						checkforLoop = true
 					}
@@ -130,7 +130,7 @@ func shortLinkCreate(c *gin.Context) {
 		}
 	} else {
 		r = Result{false, "Please type a Vaild URL.", ""}
-		c.JSON(404, r)
+		c.JSON(400, r)
 	}
 }
 
