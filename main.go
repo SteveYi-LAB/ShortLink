@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
@@ -236,6 +237,10 @@ func main() {
 	router.POST("/api/v1/create", shortLinkCreate)
 
 	router.NoRoute(pageNotAvailable)
+
+	router.Use(cors.New(cors.Config{
+		AllowOrigins: []string{"*"},
+	}))
 
 	router.Run(":32156")
 }
