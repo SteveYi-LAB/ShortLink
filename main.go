@@ -58,6 +58,26 @@ func redicertShortLink(c *gin.Context) {
 	}
 }
 
+func shortlinkRevoke(c *gin.Context) {
+	type Result struct {
+		Success bool
+		Message string
+		Link    string
+	}
+
+	var r Result
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	tokenValue := os.Getenv("token")
+	token := c.PostForm("token")
+	link := c.PostForm("link")
+	admin := c.PostForm("admin")
+}
+
 func shortLinkCreate(c *gin.Context) {
 
 	type Result struct {
@@ -255,19 +275,21 @@ func main() {
 	USER = os.Getenv("SQL_USER")
 	PASSWORD = os.Getenv("SQL_PASSWORD")
 
-	router := gin.New()
-	router.Use(gin.Logger(), gin.Recovery())
-	router.LoadHTMLGlob("static/*")
+	route := gin.New()
+	route.Use(gin.Logger(), gin.Recovery())
+	route.LoadHTMLGlob("static/*")
 
-	router.GET("/", indexPage)
-	router.GET("/:ShortLinkCode", redicertShortLink)
-	router.POST("/api/v1/create", shortLinkCreate)
+	route.GET("/", indexPage)
+	route.GET("/:ShortLinkCode", redicertShortLink)
 
-	router.NoRoute(pageNotAvailable)
+	route.POST("/api/v1/create", shortLinkCreate)
+	route.POST("/api/v1/revoke", shortlinkRevoke)
 
-	router.Use(cors.New(cors.Config{
+	route.NoRoute(pageNotAvailable)
+
+	route.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"*"},
 	}))
 
-	router.Run(":32156")
+	route.Run(":32156")
 }
