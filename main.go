@@ -37,8 +37,6 @@ func redicertShortLink(c *gin.Context) {
 
 	rows, err := db.Query("SELECT link FROM shortlink WHERE code = $1", shortLinkCode)
 
-	var linkcheck bool
-
 	for rows.Next() {
 		var link string
 		err = rows.Scan(&link)
@@ -46,15 +44,10 @@ func redicertShortLink(c *gin.Context) {
 			fmt.Println(err)
 		}
 		if link == "" {
-			linkcheck = false
+			c.HTML(404, "404.tmpl", nil)
 		} else {
 			c.Redirect(302, link)
-			linkcheck = true
 		}
-	}
-
-	if linkcheck == false {
-		c.HTML(404, "404.tmpl", nil)
 	}
 }
 
@@ -74,8 +67,83 @@ func shortlinkRevoke(c *gin.Context) {
 
 	tokenValue := os.Getenv("token")
 	token := c.PostForm("token")
-	link := c.PostForm("link")
-	admin := c.PostForm("admin")
+	code := c.PostForm("Code")
+
+	if token == tokenValue {
+		if checkCodeAvailable(code) == true {
+			db, err := sql.Open(
+				"postgres",
+				fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable", HOST, USER, PASSWORD, DATABASE),
+			)
+			if err != nil {
+				panic(err)
+			}
+
+			sqlStatement := `
+			UPDATE shortlink SET revoke = $1 WHERE code = $2`
+			_, err = db.Exec(sqlStatement, "true", code)
+
+			if err != nil {
+				panic(err)
+			}
+
+		} else {
+			r = Result{false, "ShortLink Not Found!", ""}
+			c.JSON(404, r)
+		}
+	} else {
+		r = Result{false, "Unauthorized!", ""}
+		c.JSON(400, r)
+	}
+}
+
+func shortLinkList(c *gin.Context) {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	token := c.PostForm("token")
+	tokenValue := os.Getenv("token")
+
+	if token == tokenValue {
+
+		db, err := sql.Open(
+			"postgres",
+			fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable", HOST, USER, PASSWORD, DATABASE),
+		)
+		if err != nil {
+			panic(err)
+		}
+
+		rows, err := db.Query("SELECT * FROM shortlink")
+
+		var link string
+
+		for rows.Next() {
+			err = rows.Scan(&link)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+
+		type Result struct {
+			Success bool
+			Data    string
+		}
+		var r Result
+		r = Result{true, link}
+		c.JSON(200, r)
+	} else {
+		type Result struct {
+			Success bool
+			Message string
+		}
+		var r Result
+		r = Result{false, "Unauthorized!"}
+		c.JSON(400, r)
+	}
 }
 
 func shortLinkCreate(c *gin.Context) {
@@ -283,6 +351,7 @@ func main() {
 	route.GET("/:ShortLinkCode", redicertShortLink)
 
 	route.POST("/api/v1/create", shortLinkCreate)
+	route.POST("/api/v1/list", shortLinkList)
 	route.POST("/api/v1/revoke", shortlinkRevoke)
 
 	route.NoRoute(pageNotAvailable)
