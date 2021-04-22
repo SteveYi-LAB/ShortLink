@@ -39,7 +39,7 @@
             <p>${shortlinkError}</a>
         </div>
         <div class="ts clearing segment">
-            <form class="ts form" action="/api/v1/create" method="POST" id="short-link-form" @submit.prevent="createShortLink">
+            <form class="ts form" id="short-link-form" @submit.prevent="createShortLink">
                 <div class="field">
                     <label></label>
                     <input placeholder="輸入你想縮短的網址..." type="text" name='link'>
@@ -49,7 +49,7 @@
                     <br>
                     <div class='g-recaptcha' data-sitekey='6LdkGd8UAAAAAM2gOhnVwf64D2arRTf0OXI6tNSy'></div>
                 </div>
-                <button class="ts right floated button" v-on:click="createShortLink">建立!</button>
+                <button class="ts right floated button">建立!</button>
             </form>
         </div>
         Design by 酷小易 @ 2021
@@ -85,7 +85,6 @@
                 this.shortlinkError = ""
 
                 let formData = new URLSearchParams(new FormData(document.getElementById('short-link-form')));
-                console.log(formData)
                 const res = await fetch('/api/v1/create', {
                     method: 'POST',
                     body: formData,
@@ -99,7 +98,6 @@
                     console.error(data)
                     this.shortlinkError = data.Message;
                 }
-                
             }
         }
     }

@@ -117,24 +117,39 @@ func shortLinkList(c *gin.Context) {
 			panic(err)
 		}
 
-		rows, err := db.Query("SELECT * FROM shortlink")
+		var code_data string
+		var link_data string
+		var ipaddress_data string
 
-		var link string
+		type Data_list struct {
+			Code       string
+			Link       string
+			IP_Address string
+		}
+		var SQL_List []Data_list
+
+		var l Data_list
+		rows, err := db.Query("SELECT * from shortlink")
+		defer rows.Close()
 
 		for rows.Next() {
-			err = rows.Scan(&link)
-			if err != nil {
-				fmt.Println(err)
+			switch err := rows.Scan(&code_data, &link_data, &ipaddress_data); err {
+			case sql.ErrNoRows:
+				fmt.Println("No rows were returned")
+			case nil:
+				l = Data_list{code_data, link_data, ipaddress_data}
+				SQL_List = append(SQL_List, l)
 			}
 		}
 
 		type Result struct {
 			Success bool
-			Data    string
+			Data    []Data_list
 		}
 		var r Result
-		r = Result{true, link}
+		r = Result{true, SQL_List}
 		c.JSON(200, r)
+
 	} else {
 		type Result struct {
 			Success bool
