@@ -1,4 +1,4 @@
-module gin
+module github.com/SteveYi-LAB/SteveYi-ShortLink
 
 go 1.16
 

@@ -30,6 +30,14 @@
     </div>
     <br>
     <div class="ts very narrow container" id="app">
+        <div class="ts positive message" v-if="shortlink">
+            <div class="header">恭喜！短網址已經建立好了。</div>
+            <a :href="shortlink">短網址: ${shortlink}</a>
+        </div>
+        <div class="ts negative message" v-if="shortlinkError">
+            <div class="header">出錯啦!</div>
+            <p>${shortlinkError}</a>
+        </div>
         <div class="ts clearing segment">
             <form class="ts form" action="/api/v1/create" method="POST" id="short-link-form" @submit.prevent="createShortLink">
                 <div class="field">
@@ -41,7 +49,7 @@
                     <br>
                     <div class='g-recaptcha' data-sitekey='6LdkGd8UAAAAAM2gOhnVwf64D2arRTf0OXI6tNSy'></div>
                 </div>
-                <button class="ts right floated button">建立!</button>
+                <button class="ts right floated button" v-on:click="createShortLink">建立!</button>
             </form>
         </div>
         Design by 酷小易 @ 2021
@@ -53,7 +61,9 @@
         delimiters: ['${', '}'],
         data() {
             return {
-                IP: '0.0.0.0'
+                IP: '0.0.0.0',
+                shortlink: "",
+                shortlinkError: ""
             }
         },
         async created() {
@@ -70,14 +80,26 @@
                 } = await fetch('https://ip.steveyi.net/ip/').then(x => x.json())
                 this.IP = IP
             },
-            async createShortLink() {
+            async createShortLink(e) {
+                this.shortlink = ""
+                this.shortlinkError = ""
+
                 let formData = new URLSearchParams(new FormData(document.getElementById('short-link-form')));
                 console.log(formData)
-                let res = await fetch('/api/v1/create', {
+                const res = await fetch('/api/v1/create', {
                     method: 'POST',
                     body: formData,
-                }).then(x => x.json())
-                console.log(res)
+                })
+                if (res.ok) {
+                    const data = await res.json()
+                    console.log(data)
+                    this.shortlink = data.Link
+                } else {
+                    const data = await res.json()
+                    console.error(data)
+                    this.shortlinkError = data.Message;
+                }
+                
             }
         }
     }
