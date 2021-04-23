@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>管理員控制台 - SteveYi ShortLink</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/2.3.3/tocas.css">
+    <link rel="icon" href="https://static.yiy.tw/static/img/apple-touch-icon-114x114.png">
+    <script src='https://www.recaptcha.net/recaptcha/api.js' async defer></script>
+</head>
+
+<body>
+    <div class="ts padded horizontally fitted fluid slate">
+        <div class="ts very narrow container">
+            <h1>管理員您好！</h1>
+            <p>歡迎！請登入您的帳號</p>
+        </div>
+    </div>
+    <br>
+    <div class="ts very narrow container">
+        <div class="ts clearing segment">
+            <form class="ts form" action="/api/v1/list" method="POST">
+                <div class="field">
+                    <label>令牌</label>
+                    <input placeholder="請輸入管理員令牌" type="password" name='token' required>
+                </div>
+                <script type="application/javascript">
+                    function getip(json) {
+                        document.write("<p>系統會自動記錄您目前的 IP 位置 ", json.ip, "</p>");
+                    }
+                </script>
+                <script type="application/javascript" src="https://api.ip.sb/jsonip?callback=getip"></script>
+                <button class="ts right floated button">登入</button>
+            </form>
+        </div>
+        Design by 酷小易 @
+        <script type="text/javascript">
+            document.write(new Date().getFullYear());
+        </script>
+        <br />
+    </div>
+</body>
+
+</html>

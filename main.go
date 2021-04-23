@@ -37,16 +37,31 @@ func redicertShortLink(c *gin.Context) {
 
 	rows, err := db.Query("SELECT link FROM shortlink WHERE code = $1", shortLinkCode)
 
+	var link string
+
 	for rows.Next() {
-		var link string
 		err = rows.Scan(&link)
 		if err != nil {
 			fmt.Println(err)
 		}
-		if link == "" {
-			c.HTML(404, "404.tmpl", nil)
-		} else {
-			c.Redirect(302, link)
+	}
+	if link == "" {
+		c.HTML(404, "404.tmpl", nil)
+	} else {
+		c.Redirect(302, link)
+	}
+}
+
+func portal(c *gin.Context) {
+	if strings.HasPrefix(c.Request.URL.Path, "/portal/") {
+		AdminPath := strings.ReplaceAll((c.Request.URL.Path), "/portal/", "")
+		switch AdminPath {
+		case "":
+			portalPage(c)
+		case "list":
+			listPage(c)
+		default:
+			pageNotAvailable(c)
 		}
 	}
 }
@@ -70,7 +85,7 @@ func shortlinkRevoke(c *gin.Context) {
 	code := c.PostForm("Code")
 
 	if token == tokenValue {
-		if checkCodeAvailable(code) == true {
+		if checkCodeAvailable(code) {
 			db, err := sql.Open(
 				"postgres",
 				fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable", HOST, USER, PASSWORD, DATABASE),
@@ -184,7 +199,7 @@ func shortLinkCreate(c *gin.Context) {
 	custom := c.PostForm("custom")
 	customcode := c.PostForm("customcode")
 
-	if strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://") == true {
+	if strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://") {
 		if admin == "true" {
 			if token == tokenValue {
 
@@ -195,7 +210,7 @@ func shortLinkCreate(c *gin.Context) {
 					code = customcode
 				}
 
-				if createShortLink(code, link, c.ClientIP()) == true {
+				if createShortLink(code, link, c.ClientIP()) {
 					r = Result{true, "Succeed to create Link!", "https://yiy.tw/" + code}
 					c.JSON(200, r)
 				} else {
@@ -208,14 +223,14 @@ func shortLinkCreate(c *gin.Context) {
 				c.JSON(403, r)
 			}
 		} else {
-			if verifyRecaptcha(googleRecaptcha) == true {
+			if verifyRecaptcha(googleRecaptcha) {
 				var code string
 				code = randomString(3)
 				var checkforLoop bool
 
-				for checkforLoop == false {
-					if checkCodeAvailable(code) == false {
-						if createShortLink(code, link, c.ClientIP()) == true {
+				for !checkforLoop {
+					if !checkCodeAvailable(code) {
+						if createShortLink(code, link, c.ClientIP()) {
 							r = Result{true, "Succeed to create Link!", "https://yiy.tw/" + code}
 							c.JSON(200, r)
 						} else {
@@ -248,7 +263,7 @@ func checkCodeAvailable(code string) bool {
 		panic(err)
 	}
 
-	rows, err := db.Query("SELECT link FROM shortlink WHERE code = $1", "steveyi")
+	rows, err := db.Query("SELECT link FROM shortlink WHERE code = $1", code)
 
 	var check bool
 
@@ -333,7 +348,7 @@ func verifyRecaptcha(recaptcha string) bool {
 
 	json.Unmarshal(body, &googleResponse)
 
-	if googleResponse.Success == true {
+	if googleResponse.Success {
 		verifySuccess = true
 	}
 	return verifySuccess
@@ -341,6 +356,14 @@ func verifyRecaptcha(recaptcha string) bool {
 
 func indexPage(c *gin.Context) {
 	c.HTML(200, "index.tmpl", nil)
+}
+
+func portalPage(c *gin.Context) {
+	c.HTML(200, "portal_index.tmpl", nil)
+}
+
+func listPage(c *gin.Context) {
+	c.HTML(200, "portal_list.tmpl", nil)
 }
 
 func pageNotAvailable(c *gin.Context) {
@@ -363,7 +386,8 @@ func main() {
 	route.LoadHTMLGlob("static/*")
 
 	route.GET("/", indexPage)
-	route.GET("/:ShortLinkCode", redicertShortLink)
+	route.GET("/ShortLinkCode", redicertShortLink)
+	route.GET("/portal/*portal", portal)
 
 	route.POST("/api/v1/create", shortLinkCreate)
 	route.POST("/api/v1/list", shortLinkList)

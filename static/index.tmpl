@@ -36,7 +36,7 @@
         </div>
         <div class="ts negative message" v-if="shortlinkError">
             <div class="header">出錯啦!</div>
-            <p>${shortlinkError}</a>
+            <p>${shortlinkError}</p>
         </div>
         <div class="ts clearing segment">
             <form class="ts form" id="short-link-form" @submit.prevent="createShortLink">
@@ -55,7 +55,6 @@
         Design by 酷小易 @ 2021
         <br/>
     </div>
-</body>
 <script>
     const App = {
         delimiters: ['${', '}'],
@@ -103,5 +102,5 @@
     }
     Vue.createApp(App).mount('#app')
 </script>
-
+</body>
 </html>
