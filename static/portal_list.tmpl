@@ -48,18 +48,15 @@
                 <tr>
                     <th>代碼</th>
                     <th>原始網址</th>
-                    <th>產生時的 IP 位置</th>
+                    <th>產生的 IP 位置</th>
+                    <th>撤銷</th>
                 </tr>
             </thead>
-            <tbody>
-                <tr>
-                    <td>${shortlink.code}</td>
-                    <td>${shortlink}</td>
-                    <td>${shortlink.IP_Address}</td>
-                </tr>
+            <tbody v-html="shortlink">
             </tbody>
         </table>
         Design by 酷小易 @ 2021
+        <br/>
         <br/>
     </div>
     <script>
@@ -74,9 +71,7 @@
             },
             methods: {
                 async createShortLink(e) {
-                    this.shortlink.code = ""
-                    this.shortlink.Source_Link = ""
-                    this.shortlink.IP_Address = ""
+                    this.shortlink = ""
                     this.shortlinkError = ""
 
                     let formData = new URLSearchParams(new FormData(document.getElementById('short-link-form')));
@@ -86,8 +81,29 @@
                     })
                     if (res.ok) {
                         const data = await res.json()
+
+                        var count = Object.keys(data.Data).length;
                         console.log(data)
-                        this.shortlink = data.Data[1].Link
+                        var i;
+                        var html_code;
+                        html_code = "";
+                        for (i = 0; i <= count; i++) {
+                            shortlink_code = data.Data[i].Code;
+                            shortlink_source_link = data.Data[i].Link;
+                            shortlink_ip_address = data.Data[i].IP_Address;
+                            shortlink_ip_address_whois = "https://whois.steveyi.net/whois/"+shortlink_ip_address;
+                            shortlink_revoke_link = "https://yiy.tw/api/v1/revoke?id="+shortlink_code;
+                            console.log(data.Data[i].Link);
+                            html_code = html_code + `
+<tr>
+    <td>${ shortlink_code }</td>
+    <td>因為部分網址太長<br>所以暫時不顯示<!--${ shortlink_source_link }--></td>
+    <td><a href=${ shortlink_ip_address_whois }>${ shortlink_ip_address }</a></td>
+    <td><a href=${ shortlink_revoke_link }><button class="ts button">撤銷</button></a></td>
+</tr>`
+                            this.shortlink = html_code;
+                        }
+
                     } else {
                         const data = await res.json()
                         console.error(data)
