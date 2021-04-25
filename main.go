@@ -25,7 +25,7 @@ var USER string
 var PASSWORD string
 
 func redicertShortLink(c *gin.Context) {
-	shortLinkCode := strings.ReplaceAll((c.Request.URL.Path), "/", "")
+	shortLinkCode := c.Param("ShortLinkCode")
 
 	db, err := sql.Open(
 		"postgres",
@@ -386,8 +386,7 @@ func main() {
 	route.LoadHTMLGlob("static/*")
 
 	route.GET("/", indexPage)
-	route.GET("/ShortLinkCode", redicertShortLink)
-	route.GET("/portal/*portal", portal)
+	route.GET("/:ShortLinkCode", redicertShortLink)
 
 	route.POST("/api/v1/create", shortLinkCreate)
 	route.POST("/api/v1/list", shortLinkList)
@@ -399,5 +398,5 @@ func main() {
 		AllowOrigins: []string{"*"},
 	}))
 
-	route.Run(":32156")
+	route.Run("127.0.0.1:32156")
 }
