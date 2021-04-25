@@ -383,6 +383,12 @@ func main() {
 
 	route := gin.New()
 	route.Use(gin.Logger(), gin.Recovery())
+
+	config := cors.DefaultConfig()
+	config.AllowOrigins = []string{"*"}
+
+	route.Use(cors.New(config))
+
 	route.LoadHTMLGlob("static/*")
 
 	route.GET("/", indexPage)
@@ -393,10 +399,6 @@ func main() {
 	route.POST("/api/v1/revoke", shortlinkRevoke)
 
 	route.NoRoute(pageNotAvailable)
-
-	route.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"*"},
-	}))
 
 	route.Run("127.0.0.1:32156")
 }
